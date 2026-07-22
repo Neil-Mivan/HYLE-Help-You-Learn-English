@@ -1,0 +1,314 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="light" />
+    <meta
+      name="description"
+      content="一款隐私优先的雅思英文精读工具：本地排版、划词翻译、高亮、笔记与学习记录。"
+    />
+    <title>澄读 · IELTS Reading</title>
+    <link rel="stylesheet" href="./styles.css?v=20260722-7" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar" aria-label="主导航">
+        <button class="brand" data-view-target="reader" aria-label="澄读首页">
+          <span class="brand-mark" aria-hidden="true">澄</span>
+          <span class="brand-copy">
+            <strong>澄读</strong>
+            <small>IELTS READING</small>
+          </span>
+        </button>
+
+        <nav class="nav-list">
+          <button class="nav-item is-active" data-view-target="reader">
+            <span aria-hidden="true">▤</span><span>阅读</span>
+          </button>
+          <button class="nav-item" data-view-target="library">
+            <span aria-hidden="true">▦</span><span>文章库</span>
+          </button>
+          <button class="nav-item" data-view-target="vocabulary">
+            <span aria-hidden="true">Aa</span><span>生词本</span>
+          </button>
+          <button class="nav-item" data-view-target="profile">
+            <span aria-hidden="true">◌</span><span>学习页</span>
+          </button>
+        </nav>
+
+        <div class="privacy-badge" title="文章和学习记录保存在当前浏览器">
+          <span class="privacy-dot"></span>
+          <div><strong id="privacyModeTitle">本地模式</strong><small id="privacyModeDetail">数据不上传</small></div>
+        </div>
+      </aside>
+
+      <main class="main-area">
+        <header class="topbar">
+          <div class="topbar-heading">
+            <button class="sidebar-toggle" id="sidebarToggle" type="button" aria-label="隐藏侧边栏" title="隐藏侧边栏">
+              <span aria-hidden="true">☰</span>
+            </button>
+            <div>
+              <p class="eyebrow" id="viewEyebrow">FOCUSED READING</p>
+              <h1 id="viewTitle">开始阅读</h1>
+            </div>
+          </div>
+          <div class="topbar-actions">
+            <span class="translator-status" id="translatorStatus">
+              <span class="status-dot"></span>
+              <span>检测本地翻译…</span>
+            </span>
+            <button class="button button-quiet api-settings-button" id="apiSettingsButton" type="button">连接 API</button>
+            <button class="button button-primary" id="newArticleButton">＋ 导入文章</button>
+          </div>
+        </header>
+
+        <section class="view is-active" id="readerView" data-view="reader">
+          <div class="empty-state" id="emptyState">
+            <div class="empty-illustration" aria-hidden="true">
+              <span class="paper paper-back"></span>
+              <span class="paper paper-front"><i></i><i></i><i></i><i></i></span>
+            </div>
+            <p class="eyebrow">YOUR READING DESK</p>
+            <h2>让英文文章真正适合精读</h2>
+            <p class="empty-description">
+              粘贴一篇文章，澄读会自动识别标题、整理段落。点击单词或框选句子即可翻译、标注和记录。
+            </p>
+            <div class="empty-actions">
+              <button class="button button-primary button-large" id="emptyImportButton">导入第一篇文章</button>
+              <button class="button button-quiet button-large" id="loadSampleButton">使用示例文章</button>
+            </div>
+            <div class="feature-row" aria-label="功能特点">
+              <span>本地保存</span><span id="translationFeatureLabel">浏览器内翻译</span><span>无账号也可用</span>
+            </div>
+          </div>
+
+          <div class="reader-workspace is-hidden" id="readerWorkspace">
+            <article class="article-card">
+              <div class="article-toolbar">
+                <div class="article-meta">
+                  <span id="articleWordCount">0 words</span>
+                  <span aria-hidden="true">·</span>
+                  <span id="articleReadingTime">0 min</span>
+                  <span class="ai-structured-badge is-hidden" id="articleStructureStatus">AI 已整理</span>
+                </div>
+                <div class="article-actions">
+                  <div class="font-controls" aria-label="调整正文字号">
+                    <span class="font-controls-label">字号</span>
+                    <button class="icon-button" id="fontDecrease" aria-label="减小正文字号" title="减小正文字号">A−</button>
+                    <output id="fontSizeValue" aria-live="polite">18</output>
+                    <button class="icon-button" id="fontIncrease" aria-label="增大正文字号" title="增大正文字号">A＋</button>
+                  </div>
+                  <button class="text-button" id="toggleTranslationButton">显示全文翻译</button>
+                  <button class="text-button" id="toggleInspectorButton">隐藏精读栏</button>
+                  <button class="icon-button danger-hover" id="deleteArticleButton" aria-label="删除当前文章">删除</button>
+                </div>
+              </div>
+
+              <header class="article-header" id="articleHeader">
+                <p class="article-kicker">READING PASSAGE</p>
+                <h2 id="articleTitle"></h2>
+              </header>
+              <div class="article-content" id="articleContent"></div>
+            </article>
+
+            <aside class="inspector" id="inspector">
+              <button class="inspector-close" id="inspectorClose" type="button" aria-label="关闭精读栏" title="关闭精读栏">×</button>
+              <div class="inspector-scroll" id="inspectorScroll">
+              <div class="inspector-placeholder" id="inspectorPlaceholder">
+                <span class="selection-icon" aria-hidden="true">Aa</span>
+                <h3>选择内容开始精读</h3>
+                <p>点击单词查看词典义；框选词组或句子后，可以翻译、高亮或添加笔记。</p>
+              </div>
+
+              <div class="lookup-panel is-hidden" id="lookupPanel">
+                <div class="lookup-heading">
+                  <div>
+                    <p class="eyebrow" id="lookupType">WORD</p>
+                    <h3 id="lookupText"></h3>
+                    <p class="phonetic" id="lookupPhonetic"></p>
+                  </div>
+                  <button class="icon-button" id="speakButton" aria-label="朗读选中内容">▶</button>
+                </div>
+                <div class="context-chip is-hidden" id="contextChip"></div>
+                <div class="translation-result" id="translationResult">
+                  <p class="muted">选择“翻译”查看本文语境下的含义。</p>
+                </div>
+                <div class="lookup-actions">
+                  <button class="button button-primary" id="translateSelectionButton">翻译</button>
+                  <button class="button button-secondary" id="saveWordButton">加入生词本</button>
+                </div>
+                <div class="ai-study-actions">
+                  <button class="text-button is-hidden" id="explainContextButton" type="button">为什么这样翻译？</button>
+                  <button class="text-button is-hidden" id="analyzeSentenceButton" type="button">拆解长难句</button>
+                  <small>仅点击时调用 AI</small>
+                </div>
+                <div class="ai-insight is-hidden" id="aiInsightResult"></div>
+                <div class="note-editor">
+                  <label for="selectionNote">随手记</label>
+                  <textarea id="selectionNote" rows="4" placeholder="记录同义替换、长难句结构或自己的理解…"></textarea>
+                  <button class="text-button" id="saveNoteButton">保存笔记</button>
+                </div>
+              </div>
+
+              <div class="article-notes">
+                <div class="section-heading compact">
+                  <div><p class="eyebrow">NOTES</p><h3>本文笔记</h3></div>
+                  <span id="noteCount">0</span>
+                </div>
+                <div class="note-list" id="articleNoteList">
+                  <p class="muted small">还没有笔记。</p>
+                </div>
+              </div>
+              </div>
+            </aside>
+          </div>
+        </section>
+
+        <section class="view" id="libraryView" data-view="library">
+          <div class="section-heading">
+            <div><p class="eyebrow">YOUR LIBRARY</p><h2>学习过的文章</h2></div>
+            <span class="count-pill" id="libraryCount">0 篇</span>
+          </div>
+          <div class="card-grid" id="libraryGrid"></div>
+        </section>
+
+        <section class="view" id="vocabularyView" data-view="vocabulary">
+          <div class="section-heading">
+            <div><p class="eyebrow">VOCABULARY</p><h2>生词与词组</h2></div>
+            <span class="count-pill" id="vocabularyCount">0 个</span>
+          </div>
+
+          <section class="review-overview" id="reviewOverview" aria-label="生词复习概览">
+            <div class="review-overview-copy">
+              <p class="eyebrow">DAILY REVIEW</p>
+              <h3>今天复习一点，记得更久</h3>
+              <p>复习记录只保存在本机，不调用 AI。</p>
+            </div>
+            <div class="review-metrics">
+              <div><strong id="dueVocabularyCount">0</strong><span>今日待复习</span></div>
+              <div><strong id="masteredVocabularyCount">0</strong><span>已逐渐掌握</span></div>
+            </div>
+            <button class="button button-primary" id="startReviewButton" type="button">开始复习</button>
+          </section>
+
+          <section class="review-session is-hidden" id="reviewPanel" aria-live="polite">
+            <div class="review-session-head">
+              <div><p class="eyebrow">FOCUS CARD</p><span id="reviewProgress">1 / 1</span></div>
+              <button class="icon-button" id="closeReviewButton" type="button" aria-label="结束本次复习">结束</button>
+            </div>
+            <article class="review-card" id="reviewCard">
+              <div class="review-prompt">
+                <p class="eyebrow">WORD</p>
+                <h3 id="reviewWord">word</h3>
+                <p id="reviewPhonetic"></p>
+                <blockquote id="reviewContext"></blockquote>
+              </div>
+              <div class="review-answer is-hidden" id="reviewAnswer">
+                <span>本句含义</span>
+                <p id="reviewMeaning"></p>
+              </div>
+              <button class="button button-secondary review-reveal" id="revealReviewAnswer" type="button">显示答案</button>
+              <div class="review-rating is-hidden" id="reviewRating" aria-label="记忆程度">
+                <button type="button" data-review-rating="again"><strong>不认识</strong><span>本轮再看</span></button>
+                <button type="button" data-review-rating="hard"><strong>模糊</strong><span>较快复习</span></button>
+                <button type="button" data-review-rating="good"><strong>认识</strong><span>延长间隔</span></button>
+              </div>
+            </article>
+          </section>
+
+          <div class="vocabulary-list" id="vocabularyList"></div>
+        </section>
+
+        <section class="view" id="profileView" data-view="profile">
+          <div class="profile-hero">
+            <div class="profile-avatar">R</div>
+            <div><p class="eyebrow">LOCAL LEARNER</p><h2>你的精读记录</h2><p>所有记录仅保存在当前浏览器。</p></div>
+          </div>
+          <div class="stat-grid" id="statGrid"></div>
+          <div class="privacy-card">
+            <div><p class="eyebrow">PRIVACY</p><h3>数据控制</h3></div>
+            <p>文章、高亮、笔记和生词保存在当前浏览器。主动启用 AI 结构整理时会发送整篇文章；翻译、语境解释和长难句拆解只发送当前所需文本，不发送笔记与学习历史。</p>
+            <button class="button button-secondary danger-hover" id="clearAllDataButton">清除全部本地数据</button>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <div class="selection-toolbar is-hidden" id="selectionToolbar" role="toolbar" aria-label="文本工具">
+      <button data-selection-action="translate">译</button>
+      <span class="toolbar-divider"></span>
+      <button class="color-dot yellow" data-highlight-color="yellow" aria-label="黄色高亮"></button>
+      <button class="color-dot mint" data-highlight-color="mint" aria-label="绿色高亮"></button>
+      <button class="color-dot blue" data-highlight-color="blue" aria-label="蓝色高亮"></button>
+      <button data-selection-action="note">记</button>
+    </div>
+
+    <dialog class="import-dialog" id="importDialog">
+      <form method="dialog" id="importForm">
+        <div class="dialog-heading">
+          <div><p class="eyebrow">NEW ARTICLE</p><h2>导入英文文章</h2></div>
+          <button class="dialog-close" id="closeImportButton" type="button" aria-label="关闭导入窗口">×</button>
+        </div>
+        <label class="field">
+          <span>标题 <small>可选，留空时自动识别</small></span>
+          <input id="titleInput" type="text" autocomplete="off" placeholder="例如 The Future of Urban Farming" />
+        </label>
+        <label class="field">
+          <span>文章内容</span>
+          <textarea id="articleInput" rows="14" placeholder="在这里粘贴完整英文文章…" required></textarea>
+        </label>
+        <label class="ai-import-option">
+          <input id="aiStructureToggle" type="checkbox" checked />
+          <span>
+            <strong>使用 AI 自动识别标题与正文结构</strong>
+            <small>会将本次导入的整篇文章发送给千问一次；关闭后使用本地规则整理。</small>
+          </span>
+        </label>
+        <div class="dialog-foot">
+          <p><span class="privacy-dot"></span><span id="importPrivacyHint">启用 AI 整理时，本篇文章将发送给千问</span></p>
+          <button class="button button-primary button-large" id="createArticleButton" value="default">整理并开始阅读</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog class="import-dialog api-dialog" id="apiDialog">
+      <form method="dialog" id="apiForm">
+        <div class="dialog-heading">
+          <div><p class="eyebrow">PERSONAL API</p><h2>连接自己的千问</h2></div>
+          <button class="dialog-close" id="closeApiButton" type="button" aria-label="关闭 API 设置">×</button>
+        </div>
+        <div class="api-privacy-note">
+          <span class="privacy-dot"></span>
+          <p><strong>无账号、自带 Key</strong><br />Key 只保存在这台设备的浏览器中。调用 AI 时经当前网站后端临时转发，澄读服务代码不会主动保存或记录 Key 和请求内容。</p>
+        </div>
+        <label class="field">
+          <span>阿里云百炼 API Key</span>
+          <input id="personalApiKeyInput" type="password" autocomplete="new-password" spellcheck="false" placeholder="sk-…" />
+        </label>
+        <label class="remember-api-key">
+          <input id="rememberApiKey" type="checkbox" checked />
+          <span><strong>在这台设备上记住</strong><small>下次打开自动连接；不要在公共电脑上勾选。</small></span>
+        </label>
+        <p class="api-security-warning">公开网站必须使用 HTTPS。浏览器本地保存适合可信的小范围朋友使用，但不能达到账号保险库级别的安全性。</p>
+        <p class="api-settings-status" id="apiSettingsStatus" role="status"></p>
+        <div class="api-dialog-actions">
+          <button class="button button-quiet danger-hover" id="clearApiKeyButton" type="button">移除本机 Key</button>
+          <button class="button button-primary" id="saveApiKeyButton" value="default">保存并自动连接</button>
+        </div>
+      </form>
+    </dialog>
+
+    <div class="confirm-overlay is-hidden" id="confirmOverlay" role="dialog" aria-modal="true">
+      <div class="confirm-card">
+        <h3 id="confirmTitle">确认操作</h3>
+        <p id="confirmMessage"></p>
+        <div><button class="button button-secondary" id="confirmCancel">取消</button><button class="button button-danger" id="confirmAccept">确认删除</button></div>
+      </div>
+    </div>
+
+    <div class="toast is-hidden" id="toast" role="status"></div>
+    <script src="./app.js?v=20260722-7" defer></script>
+  </body>
+</html>
