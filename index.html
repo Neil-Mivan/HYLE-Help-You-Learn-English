@@ -9,12 +9,12 @@
       content="一款隐私优先的雅思英文精读工具：本地排版、划词翻译、高亮、笔记与学习记录。"
     />
     <title>澄读 · IELTS Reading</title>
-    <link rel="stylesheet" href="./styles.css?v=20260722-7" />
+    <link rel="stylesheet" href="./styles.css?v=20260728-2" />
   </head>
   <body>
     <div class="app-shell">
       <aside class="sidebar" aria-label="主导航">
-        <button class="brand" data-view-target="reader" aria-label="澄读首页">
+        <button class="brand" data-view-target="library" aria-label="打开文章库">
           <span class="brand-mark" aria-hidden="true">澄</span>
           <span class="brand-copy">
             <strong>澄读</strong>
@@ -23,24 +23,19 @@
         </button>
 
         <nav class="nav-list">
-          <button class="nav-item is-active" data-view-target="reader">
-            <span aria-hidden="true">▤</span><span>阅读</span>
-          </button>
-          <button class="nav-item" data-view-target="library">
+          <button class="nav-item is-active" data-view-target="library">
             <span aria-hidden="true">▦</span><span>文章库</span>
+          </button>
+          <button class="nav-item" data-view-target="translator">
+            <span aria-hidden="true">译</span><span>翻译</span>
           </button>
           <button class="nav-item" data-view-target="vocabulary">
             <span aria-hidden="true">Aa</span><span>生词本</span>
           </button>
           <button class="nav-item" data-view-target="profile">
-            <span aria-hidden="true">◌</span><span>学习页</span>
+            <span aria-hidden="true">◌</span><span>我的</span>
           </button>
         </nav>
-
-        <div class="privacy-badge" title="文章和学习记录保存在当前浏览器">
-          <span class="privacy-dot"></span>
-          <div><strong id="privacyModeTitle">本地模式</strong><small id="privacyModeDetail">数据不上传</small></div>
-        </div>
       </aside>
 
       <main class="main-area">
@@ -50,11 +45,18 @@
               <span aria-hidden="true">☰</span>
             </button>
             <div>
-              <p class="eyebrow" id="viewEyebrow">FOCUSED READING</p>
-              <h1 id="viewTitle">开始阅读</h1>
+              <p class="eyebrow" id="viewEyebrow">YOUR LIBRARY</p>
+              <h1 id="viewTitle">文章库</h1>
             </div>
           </div>
           <div class="topbar-actions">
+            <button class="continue-reading-button is-hidden" id="continueReadingButton" type="button">
+              <span class="continue-reading-arrow" aria-hidden="true">←</span>
+              <span class="continue-reading-copy">
+                <strong>继续阅读</strong>
+                <small id="continueReadingTitle"></small>
+              </span>
+            </button>
             <span class="translator-status" id="translatorStatus">
               <span class="status-dot"></span>
               <span>检测本地翻译…</span>
@@ -64,7 +66,7 @@
           </div>
         </header>
 
-        <section class="view is-active" id="readerView" data-view="reader">
+        <section class="view" id="readerView" data-view="reader">
           <div class="empty-state" id="emptyState">
             <div class="empty-illustration" aria-hidden="true">
               <span class="paper paper-back"></span>
@@ -166,12 +168,57 @@
           </div>
         </section>
 
-        <section class="view" id="libraryView" data-view="library">
+        <section class="view is-active" id="libraryView" data-view="library">
           <div class="section-heading">
             <div><p class="eyebrow">YOUR LIBRARY</p><h2>学习过的文章</h2></div>
             <span class="count-pill" id="libraryCount">0 篇</span>
           </div>
           <div class="card-grid" id="libraryGrid"></div>
+        </section>
+
+        <section class="view" id="translatorView" data-view="translator">
+          <div class="standalone-translator">
+            <header class="translator-hero">
+              <div>
+                <p class="eyebrow">AI TRANSLATOR</p>
+                <h2>查清一个词，也译好一句话</h2>
+                <p>输入一个英文单词，查看不同词性下的常用义项与例句；输入词组或句子，获得完整中文翻译。</p>
+              </div>
+              <span class="ai-translation-badge">千问 AI</span>
+            </header>
+
+            <form class="translator-composer" id="standaloneTranslateForm">
+              <label for="standaloneTranslateInput">英文单词、词组或句子</label>
+              <textarea
+                id="standaloneTranslateInput"
+                rows="5"
+                maxlength="5000"
+                spellcheck="true"
+                placeholder="例如：approach&#10;或：A different approach may lead to a better result."
+              ></textarea>
+              <div class="translator-composer-foot">
+                <p>仅在点击翻译时发送当前输入，不发送文章、笔记或学习记录。</p>
+                <div>
+                  <button class="button button-quiet" id="clearStandaloneTranslate" type="button">清空</button>
+                  <button class="button button-primary" id="standaloneTranslateButton" type="submit">AI 翻译</button>
+                </div>
+              </div>
+            </form>
+
+            <div class="translator-examples" aria-label="查询示例">
+              <span>试一试</span>
+              <button type="button" data-translation-example="approach">approach</button>
+              <button type="button" data-translation-example="Water hyacinth spreads rapidly in warm, nutrient-rich water.">Water hyacinth…</button>
+            </div>
+
+            <section class="standalone-result is-empty" id="standaloneTranslationResult" aria-live="polite">
+              <div class="translator-result-placeholder">
+                <span aria-hidden="true">Aa</span>
+                <h3>在这里开始一次独立查询</h3>
+                <p>单词会按词性整理义项与例句，句子会直接显示完整译文。</p>
+              </div>
+            </section>
+          </div>
         </section>
 
         <section class="view" id="vocabularyView" data-view="vocabulary">
@@ -309,6 +356,6 @@
     </div>
 
     <div class="toast is-hidden" id="toast" role="status"></div>
-    <script src="./app.js?v=20260722-7" defer></script>
+    <script src="./app.js?v=20260728-2" defer></script>
   </body>
 </html>

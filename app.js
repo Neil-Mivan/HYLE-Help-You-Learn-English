@@ -86,8 +86,9 @@ For this reason, some planners now view trees as long-term infrastructure rather
   const VIEW_META = {
     reader: ["FOCUSED READING", "开始阅读"],
     library: ["YOUR LIBRARY", "文章库"],
+    translator: ["AI TRANSLATOR", "独立翻译"],
     vocabulary: ["VOCABULARY", "生词本"],
-    profile: ["LEARNING PROFILE", "学习记录"],
+    profile: ["MY LEARNING", "我的"],
   };
 
   const dom = {};
@@ -112,6 +113,8 @@ For this reason, some planners now view trees as long-term infrastructure rather
   let reviewRepeatIds = new Set();
   let personalApiKey = loadPersonalApiKey();
   let apiCredentialSource = "none";
+  let currentView = "library";
+  let readingSessionArticleId = null;
 
   document.addEventListener("DOMContentLoaded", init);
 
@@ -121,12 +124,13 @@ For this reason, some planners now view trees as long-term infrastructure rather
     applyFontSize(Number(localStorage.getItem(ARTICLE_FONT_KEY)) || 18);
     detectTranslatorSupport();
     renderAll();
+    switchView("library");
   }
 
   function cacheDom() {
     [
-      "viewEyebrow", "viewTitle", "translatorStatus", "newArticleButton", "sidebarToggle", "privacyModeTitle",
-      "privacyModeDetail", "translationFeatureLabel", "emptyState",
+      "viewEyebrow", "viewTitle", "translatorStatus", "newArticleButton", "sidebarToggle", "continueReadingButton", "continueReadingTitle",
+      "translationFeatureLabel", "emptyState",
       "readerWorkspace", "emptyImportButton", "loadSampleButton", "articleWordCount",
       "articleReadingTime", "articleStructureStatus", "articleHeader", "articleTitle", "articleContent", "inspector", "inspectorScroll", "inspectorPlaceholder",
       "lookupPanel", "lookupType", "lookupText", "lookupPhonetic", "contextChip", "translationResult",
@@ -135,6 +139,7 @@ For this reason, some planners now view trees as long-term infrastructure rather
       "articleNoteList", "noteCount", "toggleTranslationButton", "toggleInspectorButton", "inspectorClose",
       "fontDecrease", "fontIncrease", "fontSizeValue",
       "deleteArticleButton", "libraryGrid", "libraryCount", "vocabularyList", "vocabularyCount", "statGrid",
+      "standaloneTranslateForm", "standaloneTranslateInput", "standaloneTranslateButton", "clearStandaloneTranslate", "standaloneTranslationResult",
       "reviewOverview", "dueVocabularyCount", "masteredVocabularyCount", "startReviewButton", "reviewPanel", "reviewProgress",
       "closeReviewButton", "reviewCard", "reviewWord", "reviewPhonetic", "reviewContext", "reviewAnswer", "reviewMeaning",
       "revealReviewAnswer", "reviewRating",
@@ -151,6 +156,21 @@ For this reason, some planners now view trees as long-term infrastructure rather
     });
     document.querySelectorAll("[data-open-import]").forEach((button) => button.addEventListener("click", openImport));
     dom.newArticleButton.addEventListener("click", openImport);
+    dom.continueReadingButton.addEventListener("click", continueReading);
+    dom.standaloneTranslateForm.addEventListener("submit", handleStandaloneTranslate);
+    dom.clearStandaloneTranslate.addEventListener("click", clearStandaloneTranslation);
+    dom.standaloneTranslateInput.addEventListener("keydown", (event) => {
+      if ((event.ctrlKey || event.metaKey) && event.key === "Enter") {
+        event.preventDefault();
+        dom.standaloneTranslateForm.requestSubmit();
+      }
+    });
+    document.querySelectorAll("[data-translation-example]").forEach((button) => {
+      button.addEventListener("click", () => {
+        dom.standaloneTranslateInput.value = button.dataset.translationExample || "";
+        dom.standaloneTranslateInput.focus();
+      });
+    });
     dom.apiSettingsButton.addEventListener("click", openApiSettings);
     dom.apiForm.addEventListener("submit", handleApiSettingsSubmit);
     dom.closeApiButton.addEventListener("click", () => dom.apiDialog.close());
@@ -189,6 +209,7 @@ For this reason, some planners now view trees as long-term infrastructure rather
     dom.confirmCancel.addEventListener("click", closeConfirm);
     dom.confirmAccept.addEventListener("click", () => { if (confirmHandler) confirmHandler(); closeConfirm(); });
     window.addEventListener("resize", () => dom.selectionToolbar.classList.add("is-hidden"));
+    window.addEventListener("beforeunload", () => { if (currentView === "reader") saveReadingPosition(); });
   }
 
   function loadState() {
@@ -276,15 +297,93 @@ For this reason, some planners now view trees as long-term infrastructure rather
   }
 
   function switchView(viewName) {
+    if (viewName === "reader" && !currentArticle()) viewName = "library";
+    if (currentView === "reader" && viewName !== "reader") saveReadingPosition();
     document.querySelectorAll(".view").forEach((view) => view.classList.toggle("is-active", view.dataset.view === viewName));
     document.querySelectorAll(".nav-item").forEach((button) => button.classList.toggle("is-active", button.dataset.viewTarget === viewName));
     const [eyebrow, title] = VIEW_META[viewName] || VIEW_META.reader;
     dom.viewEyebrow.textContent = eyebrow;
     dom.viewTitle.textContent = viewName === "reader" && currentArticle() ? "专注阅读" : title;
     dom.selectionToolbar.classList.add("is-hidden");
+    currentView = viewName;
+    if (viewName === "reader") {
+      readingSessionArticleId = currentArticle()?.id || null;
+      restoreReadingPosition();
+    }
+    updateContinueReadingButton();
     if (viewName === "library") renderLibrary();
+    if (viewName === "translator") setTimeout(() => dom.standaloneTranslateInput.focus(), 80);
     if (viewName === "vocabulary") renderVocabulary();
     if (viewName === "profile") renderProfile();
+  }
+
+  function continueReading() {
+    const article = state.articles.find((item) => item.id === readingSessionArticleId);
+    if (!article) {
+      readingSessionArticleId = null;
+      updateContinueReadingButton();
+      return;
+    }
+    state.currentArticleId = article.id;
+    selected = null;
+    saveState();
+    renderReader();
+    switchView("reader");
+  }
+
+  function updateContinueReadingButton() {
+    const article = state.articles.find((item) => item.id === readingSessionArticleId);
+    const visible = Boolean(article && currentView !== "reader");
+    dom.continueReadingButton.classList.toggle("is-hidden", !visible);
+    if (!article) {
+      dom.continueReadingTitle.textContent = "";
+      dom.continueReadingButton.removeAttribute("title");
+      return;
+    }
+    const title = article.title || "未命名文章";
+    dom.continueReadingTitle.textContent = title;
+    dom.continueReadingButton.title = `继续阅读《${title}》`;
+    dom.continueReadingButton.setAttribute("aria-label", `继续阅读《${title}》`);
+  }
+
+  function saveReadingPosition() {
+    const article = currentArticle();
+    if (!article || currentView !== "reader" || dom.readerWorkspace.classList.contains("is-hidden")) return;
+    const paragraphs = [...dom.articleContent.querySelectorAll(".article-paragraph[data-paragraph-index]")];
+    if (!paragraphs.length) return;
+    const topbarBottom = document.querySelector(".topbar")?.getBoundingClientRect().bottom || 102;
+    const anchorLine = topbarBottom + 14;
+    const contentTop = dom.articleContent.getBoundingClientRect().top;
+    if (window.scrollY < 80 || contentTop > anchorLine + 80) {
+      article.readingPosition = { atStart: true, paragraphIndex: 0, offset: 0, savedAt: new Date().toISOString() };
+      saveState();
+      return;
+    }
+    const anchor = paragraphs.find((paragraph) => paragraph.getBoundingClientRect().bottom >= anchorLine) || paragraphs[paragraphs.length - 1];
+    article.readingPosition = {
+      atStart: false,
+      paragraphIndex: Number(anchor.dataset.paragraphIndex) || 0,
+      offset: Math.round(anchor.getBoundingClientRect().top - anchorLine),
+      savedAt: new Date().toISOString(),
+    };
+    saveState();
+  }
+
+  function restoreReadingPosition() {
+    const article = currentArticle();
+    if (!article) return;
+    const position = article.readingPosition;
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      if (!position || position.atStart) {
+        window.scrollTo({ top: 0, behavior: "auto" });
+        return;
+      }
+      const paragraph = dom.articleContent.querySelector(`[data-paragraph-index="${position.paragraphIndex}"]`);
+      if (!paragraph) return;
+      const topbarBottom = document.querySelector(".topbar")?.getBoundingClientRect().bottom || 102;
+      const currentOffset = paragraph.getBoundingClientRect().top - (topbarBottom + 14);
+      window.scrollTo({ top: Math.max(0, window.scrollY + currentOffset - Number(position.offset || 0)), behavior: "auto" });
+    }));
   }
 
   function openImport() {
@@ -310,6 +409,7 @@ For this reason, some planners now view trees as long-term infrastructure rather
     event.preventDefault();
     const raw = dom.articleInput.value.trim();
     if (!raw) { showToast("请先粘贴文章内容"); return; }
+    if (currentView === "reader") saveReadingPosition();
     const manualTitle = dom.titleInput.value.trim();
     let parsed;
     let aiStructured = false;
@@ -400,6 +500,7 @@ For this reason, some planners now view trees as long-term infrastructure rather
   }
 
   function loadSample() {
+    if (currentView === "reader") saveReadingPosition();
     const parsed = parseArticle(SAMPLE_ARTICLE);
     const existing = state.articles.find((article) => article.raw === SAMPLE_ARTICLE);
     if (existing) {
@@ -836,8 +937,6 @@ For this reason, some planners now view trees as long-term infrastructure rather
           const personal = apiCredentialSource === "personal";
           setTranslatorStatus(`${personal ? "个人千问" : "千问翻译"}已连接 · ${qwenModel}`, "ready");
           dom.apiSettingsButton.textContent = personal ? "个人 API" : "本机 API";
-          dom.privacyModeTitle.textContent = personal ? "自带 Key" : "混合模式";
-          dom.privacyModeDetail.textContent = personal ? "仅本设备保存" : "AI 按需发送";
           dom.translationFeatureLabel.textContent = "千问语境翻译";
           return;
         }
@@ -847,8 +946,6 @@ For this reason, some planners now view trees as long-term infrastructure rather
     qwenConfigured = false;
     apiCredentialSource = "none";
     dom.apiSettingsButton.textContent = "连接 API";
-    dom.privacyModeTitle.textContent = "本地模式";
-    dom.privacyModeDetail.textContent = "数据不上传";
     dom.translationFeatureLabel.textContent = "浏览器内翻译";
     if (!("Translator" in self)) {
       setTranslatorStatus("当前浏览器无本地翻译，词典仍可用", "warning");
@@ -890,6 +987,111 @@ For this reason, some planners now view trees as long-term infrastructure rather
     });
     setTranslatorStatus("本地翻译已就绪", "ready");
     return translator;
+  }
+
+  async function handleStandaloneTranslate(event) {
+    event.preventDefault();
+    const text = dom.standaloneTranslateInput.value.trim();
+    if (!text) {
+      showToast("请先输入一个英文单词、词组或句子");
+      dom.standaloneTranslateInput.focus();
+      return;
+    }
+    if (!qwenConfigured) {
+      renderStandaloneTranslationError("独立翻译需要连接千问 API。请先在右上角连接自己的 Key。");
+      openApiSettings();
+      return;
+    }
+
+    dom.standaloneTranslateButton.disabled = true;
+    dom.standaloneTranslateButton.textContent = "AI 正在查询…";
+    dom.standaloneTranslationResult.classList.remove("is-empty", "has-error");
+    dom.standaloneTranslationResult.innerHTML = `
+      <div class="standalone-loading">
+        <span class="status-dot"></span>
+        <div><strong>正在理解输入内容</strong><p>千问会自动判断这是单词还是句子。</p></div>
+      </div>`;
+
+    try {
+      const response = await apiFetch("/api/standalone-translate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify({ text }),
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(result.error || "千问翻译暂时不可用，请稍后重试。");
+      renderStandaloneTranslation(result);
+    } catch (error) {
+      renderStandaloneTranslationError(error.message || "翻译失败，请稍后重试。");
+    } finally {
+      dom.standaloneTranslateButton.disabled = false;
+      dom.standaloneTranslateButton.textContent = "AI 翻译";
+    }
+  }
+
+  function clearStandaloneTranslation() {
+    dom.standaloneTranslateInput.value = "";
+    dom.standaloneTranslationResult.className = "standalone-result is-empty";
+    dom.standaloneTranslationResult.innerHTML = `
+      <div class="translator-result-placeholder">
+        <span aria-hidden="true">Aa</span>
+        <h3>在这里开始一次独立查询</h3>
+        <p>单词会按词性整理义项与例句，句子会直接显示完整译文。</p>
+      </div>`;
+    dom.standaloneTranslateInput.focus();
+  }
+
+  function renderStandaloneTranslation(result) {
+    dom.standaloneTranslationResult.className = "standalone-result";
+    if (result.kind === "word") {
+      const entry = result.entry || {};
+      const forms = Array.isArray(entry.forms) ? entry.forms.filter(Boolean) : [];
+      const meaningGroups = Array.isArray(entry.meanings) ? entry.meanings : [];
+      const meaningsHtml = meaningGroups.map((group) => {
+        const senses = Array.isArray(group.senses) ? group.senses : [];
+        const sensesHtml = senses.map((sense, index) => {
+          const label = sense.label ? `<span class="sense-label">${escapeHtml(sense.label)}</span>` : "";
+          const example = sense.example
+            ? `<div class="dictionary-example"><p>${escapeHtml(sense.example)}</p>${sense.exampleTranslation ? `<span>${escapeHtml(sense.exampleTranslation)}</span>` : ""}</div>`
+            : "";
+          return `<li><div class="sense-meaning"><span>${index + 1}</span><strong>${escapeHtml(sense.meaning || "")}</strong>${label}</div>${example}</li>`;
+        }).join("");
+        return `
+          <section class="dictionary-pos-group">
+            <h4><span>${escapeHtml(group.partOfSpeech || "其他")}</span>${escapeHtml(group.partOfSpeechName || "")}</h4>
+            <ol>${sensesHtml || "<li><p class=\"muted\">暂无可展示义项。</p></li>"}</ol>
+          </section>`;
+      }).join("");
+      dom.standaloneTranslationResult.innerHTML = `
+        <header class="dictionary-entry-head">
+          <div>
+            <p class="eyebrow">WORD</p>
+            <h3>${escapeHtml(entry.word || result.query || "")}</h3>
+            ${entry.phonetic ? `<p class="dictionary-phonetic">${escapeHtml(entry.phonetic)}</p>` : ""}
+          </div>
+          <span class="model-chip">${escapeHtml(result.model || qwenAnalysisModel)}</span>
+        </header>
+        ${forms.length ? `<div class="word-forms">${forms.map((form) => `<span>${escapeHtml(form)}</span>`).join("")}</div>` : ""}
+        <div class="dictionary-groups">${meaningsHtml || "<p class=\"muted\">千问没有返回有效义项，请换一个词重试。</p>"}</div>`;
+      return;
+    }
+
+    dom.standaloneTranslationResult.innerHTML = `
+      <header class="sentence-result-head">
+        <div><p class="eyebrow">SENTENCE / PHRASE</p><h3>完整翻译</h3></div>
+        <span class="model-chip">${escapeHtml(result.model || qwenModel)}</span>
+      </header>
+      <blockquote class="sentence-source">${escapeHtml(result.query || "")}</blockquote>
+      <div class="sentence-translation"><span>中文译文</span><p>${escapeHtml(result.translation || "")}</p></div>`;
+  }
+
+  function renderStandaloneTranslationError(message) {
+    dom.standaloneTranslationResult.className = "standalone-result has-error";
+    dom.standaloneTranslationResult.innerHTML = `
+      <div class="standalone-error">
+        <strong>暂时无法完成翻译</strong>
+        <p>${escapeHtml(message)}</p>
+      </div>`;
   }
 
   async function translateText(text, context = "") {
@@ -1219,8 +1421,17 @@ For this reason, some planners now view trees as long-term infrastructure rather
     dom.libraryCount.textContent = `${state.articles.length} 篇`;
     if (!state.articles.length) {
       const empty = document.createElement("div");
-      empty.className = "empty-collection";
-      empty.textContent = "还没有文章。导入一篇英文文章开始精读吧。";
+      empty.className = "empty-collection library-empty-state";
+      empty.innerHTML = `
+        <span class="library-empty-icon" aria-hidden="true">▤</span>
+        <h3>从第一篇英文文章开始</h3>
+        <p>导入文章后，它会保存在当前浏览器的文章库中。之后每次进入澄读，都可以先从这里选择。</p>
+        <div>
+          <button class="button button-primary" type="button" data-empty-library-action="import">导入第一篇文章</button>
+          <button class="button button-quiet" type="button" data-empty-library-action="sample">使用示例文章</button>
+        </div>`;
+      empty.querySelector('[data-empty-library-action="import"]').addEventListener("click", openImport);
+      empty.querySelector('[data-empty-library-action="sample"]').addEventListener("click", loadSample);
       dom.libraryGrid.appendChild(empty);
       return;
     }
@@ -1463,11 +1674,15 @@ For this reason, some planners now view trees as long-term infrastructure rather
     const article = currentArticle();
     if (!article) return;
     openConfirm("删除这篇文章？", `“${article.title || "未命名文章"}”及其高亮、笔记和译文将从本机删除。`, () => {
+      saveReadingPosition();
       state.articles = state.articles.filter((item) => item.id !== article.id);
       state.currentArticleId = state.articles[0]?.id || null;
+      readingSessionArticleId = null;
+      currentView = "library";
       saveState();
       selected = null;
       renderAll();
+      switchView("library");
       showToast("文章已从本机删除");
     });
   }
@@ -1475,9 +1690,11 @@ For this reason, some planners now view trees as long-term infrastructure rather
   function requestClearAll() {
     openConfirm("清除全部学习数据？", "所有文章、译文、高亮、笔记和生词都会从当前浏览器永久删除。", () => {
       state = { articles: [], currentArticleId: null, vocabulary: [], createdAt: new Date().toISOString() };
+      readingSessionArticleId = null;
+      currentView = "library";
       saveState();
       renderAll();
-      switchView("reader");
+      switchView("library");
       showToast("本地学习数据已清除");
     });
   }

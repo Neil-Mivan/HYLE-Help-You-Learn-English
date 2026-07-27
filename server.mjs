@@ -108,6 +108,31 @@ const server = createServer(async (request, response) => {
       return sendJson(response, 200, { translation: translated.translation, provider: "qwen", model: translated.model, cached: false });
     }
 
+    if (requestPath === "/api/standalone-translate" && request.method === "POST") {
+      const credential = requireQwen(request);
+      const body = await readJsonBody(request, 20_000);
+      const text = cleanString(body.text);
+      if (!text) return sendJson(response, 400, { error: "请输入需要查询的英文单词、词组或句子。" });
+      if (text.length > 5_000) return sendJson(response, 413, { error: "单次输入过长，请缩短后再翻译。" });
+
+      const kind = isStandaloneWord(text) ? "word" : "sentence";
+      const cacheKey = `standalone\u0000${kind}\u0000${dashscope.analysisModels.join(",")}\u0000${text}`;
+      const cached = credential.source === "server" ? aiCache.get(cacheKey) : null;
+      if (cached) return sendJson(response, 200, { ...cached, cached: true });
+
+      const result = kind === "word"
+        ? await lookupStandaloneWord(text, credential)
+        : {
+            kind: "sentence",
+            query: text,
+            translation: await requestQwenTranslation(text, credential.apiKey),
+            provider: "qwen",
+            model: dashscope.model,
+          };
+      if (credential.source === "server") cacheAiResult(cacheKey, result);
+      return sendJson(response, 200, { ...result, cached: false });
+    }
+
     if (requestPath === "/api/analyze-article" && request.method === "POST") {
       const credential = requireQwen(request);
       const body = await readJsonBody(request, 160_000);
@@ -190,6 +215,7 @@ const server = createServer(async (request, response) => {
     else createReadStream(filePath).pipe(response);
   } catch (error) {
     const status = Number(error?.statusCode) || 500;
+    if (!error?.statusCode) console.error("Request failed:", error instanceof Error ? error.message : String(error));
     const safeMessage = error?.statusCode ? error.message : "AI 服务暂时不可用，请稍后重试。";
     sendJson(response, status, { error: safeMessage });
   }
@@ -262,6 +288,50 @@ async function requestQwenContextTranslation(text, context, credential) {
   const translation = cleanString(result.translation);
   if (!translation) throw exposedApiError(502, "千问没有返回有效译文。" );
   return { translation, model };
+}
+
+async function lookupStandaloneWord(word, credential) {
+  const prompt = [
+    "你是一部面向中国英语学习者的可靠英汉学习词典。请查询给定英文单词。",
+    "按该词实际具有的每一种常见现代词性分组，尽可能完整地列出该词性下的常用标准义项和雅思阅读中可能遇到的义项。",
+    "不要为了凑数量虚构含义；不要收录已经废弃的古义、极罕见专业义或专有名词义，除非它对普通学习者很重要。",
+    "每个义项必须给出一条自然、简洁、能体现该义项的英文例句，并给出准确中文翻译。",
+    "forms 只列有学习价值的变形或派生提示，格式例如“过去式 approached”；没有则返回空数组。",
+    "请严格按 JSON 输出：",
+    "{\"word\":\"规范拼写\",\"phonetic\":\"常见 IPA 音标\",\"forms\":[\"变形提示\"],\"meanings\":[{\"partOfSpeech\":\"n.\",\"partOfSpeechName\":\"名词\",\"senses\":[{\"meaning\":\"中文释义\",\"label\":\"可选的语域或用法标签\",\"example\":\"英文例句\",\"exampleTranslation\":\"例句中文翻译\"}]}]}",
+    `需要查询的单词：${word}`,
+  ].join("\n");
+  const { data: result, model } = await requestQwenJson(prompt, 3_000, {
+    models: uniqueModels([dashscope.contextModel, ...dashscope.analysisModels]),
+    credential,
+  });
+  const meanings = Array.isArray(result.meanings)
+    ? result.meanings.slice(0, 14).map((group) => ({
+        partOfSpeech: cleanString(group?.partOfSpeech),
+        partOfSpeechName: cleanString(group?.partOfSpeechName),
+        senses: Array.isArray(group?.senses)
+          ? group.senses.slice(0, 14).map((sense) => ({
+              meaning: cleanString(sense?.meaning),
+              label: cleanString(sense?.label),
+              example: cleanString(sense?.example),
+              exampleTranslation: cleanString(sense?.exampleTranslation),
+            })).filter((sense) => sense.meaning)
+          : [],
+      })).filter((group) => group.senses.length)
+    : [];
+  if (!meanings.length) throw exposedApiError(502, "千问没有返回有效词典义项，请稍后重试。" );
+  return {
+    kind: "word",
+    query: word,
+    entry: {
+      word: cleanString(result.word) || word,
+      phonetic: cleanString(result.phonetic),
+      forms: Array.isArray(result.forms) ? result.forms.slice(0, 10).map(cleanString).filter(Boolean) : [],
+      meanings,
+    },
+    provider: "qwen",
+    model,
+  };
 }
 
 function openPageSession(request, response) {
@@ -478,6 +548,10 @@ function resolveCredential(request) {
 
 function cleanString(value) {
   return typeof value === "string" ? value.trim() : "";
+}
+
+function isStandaloneWord(value) {
+  return /^[A-Za-z]+(?:['’-][A-Za-z]+)*$/.test(cleanString(value));
 }
 
 function uniqueModels(models) {
