@@ -55,7 +55,6 @@
 
 普通翻译使用 `qwen-mt-lite`，单词语境义优先使用 `qwen3.5-flash`。标题/结构识别、语境解释和长难句拆解按 `qwen3.7-max`、Max 快照、`qwen3.7-plus`、Plus 快照、`qwen3.5-flash` 的顺序调用；遇到免费额度用尽、限流或模型暂不可用时自动切换。可通过 `.env.local` 中的 `DASHSCOPE_ANALYSIS_MODELS` 自定义顺序（英文逗号分隔）。
 
-朋友自带 Key 模式：网页右上角可以连接各自的百炼 API Key。Key 仅保存在朋友自己的浏览器中，并随同源 HTTPS 请求临时发给后端代理；个人 Key 的请求不会进入服务端缓存。公网部署时不要上传 `.env.local`，并设置 `HOST=0.0.0.0` 和 `CLEAR_READING_REQUIRE_PERSONAL_KEY=1`，强制每位访客使用自己的 Key。服务端只公开三个前端静态文件，配置、快照和源码说明文件不能通过 URL 读取。
 
 ## 隐私边界
 
