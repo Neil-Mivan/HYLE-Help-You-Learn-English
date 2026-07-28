@@ -2,6 +2,13 @@
 setlocal
 cd /d "%~dp0"
 
+set "PORTABLE_NODE=%~dp0runtime\node.exe"
+if exist "%PORTABLE_NODE%" (
+  "%PORTABLE_NODE%" configure-api.mjs
+  pause
+  exit /b %errorlevel%
+)
+
 where node >nul 2>nul
 if not errorlevel 1 (
   node configure-api.mjs

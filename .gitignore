@@ -7,3 +7,5 @@ node_modules/
 snapshots/
 *.zip
 cloudflared.exe
+dist/
+.portable-cache/

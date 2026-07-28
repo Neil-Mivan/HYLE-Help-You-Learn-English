@@ -2,6 +2,14 @@
 setlocal
 cd /d "%~dp0"
 
+set "PORTABLE_NODE=%~dp0runtime\node.exe"
+if exist "%PORTABLE_NODE%" (
+  echo Clear Reading is running at http://127.0.0.1:4173
+  echo Close the browser tab to stop the portable server.
+  "%PORTABLE_NODE%" server.mjs
+  exit /b %errorlevel%
+)
+
 where node >nul 2>nul
 if not errorlevel 1 (
   echo Clear Reading is running at http://127.0.0.1:4173

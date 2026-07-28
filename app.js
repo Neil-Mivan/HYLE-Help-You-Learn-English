@@ -855,10 +855,23 @@ For this reason, some planners now view trees as long-term infrastructure rather
 
   function loadPersonalApiKey() {
     try {
-      return sessionStorage.getItem(PERSONAL_API_KEY_SESSION) || localStorage.getItem(PERSONAL_API_KEY_LOCAL) || "";
+      return normalizePersonalApiKey(sessionStorage.getItem(PERSONAL_API_KEY_SESSION) || localStorage.getItem(PERSONAL_API_KEY_LOCAL) || "");
     } catch (_) {
       return "";
     }
+  }
+
+  function normalizePersonalApiKey(value) {
+    return String(value || "")
+      .replace(/[\u200B-\u200D\uFEFF]/g, "")
+      .trim();
+  }
+
+  function isLikelyQwenApiKey(value) {
+    return value.length >= 12
+      && value.length <= 512
+      && /^sk-[\x21-\x7E]+$/.test(value)
+      && !value.includes("*");
   }
 
   function apiFetch(url, options = {}) {
@@ -884,14 +897,14 @@ For this reason, some planners now view trees as long-term infrastructure rather
     const submitter = event.submitter;
     if (!submitter || submitter.value === "cancel") return;
     event.preventDefault();
-    const apiKey = dom.personalApiKeyInput.value.trim();
+    const apiKey = normalizePersonalApiKey(dom.personalApiKeyInput.value);
     const isLocalAddress = location.hostname === "127.0.0.1" || location.hostname === "localhost";
     if (!isLocalAddress && location.protocol !== "https:") {
       dom.apiSettingsStatus.textContent = "为避免 Key 在网络中泄露，请先使用 HTTPS 再连接。";
       return;
     }
-    if (!/^sk-[A-Za-z0-9_-]{16,}$/.test(apiKey) || apiKey.length > 512) {
-      dom.apiSettingsStatus.textContent = "Key 格式看起来不完整，请重新复制以 sk- 开头的完整 Key。";
+    if (!isLikelyQwenApiKey(apiKey)) {
+      dom.apiSettingsStatus.textContent = "无法识别该 Key。请粘贴以 sk- 开头的完整明文 Key，不要使用包含 **** 的遮罩内容。";
       return;
     }
     try {

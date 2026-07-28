@@ -534,10 +534,10 @@ function requireQwen(request) {
 
 function resolveCredential(request) {
   const rawHeader = request.headers["x-clear-reading-api-key"];
-  const personalKey = cleanString(Array.isArray(rawHeader) ? rawHeader[0] : rawHeader);
+  const personalKey = normalizeApiKey(Array.isArray(rawHeader) ? rawHeader[0] : rawHeader);
   if (personalKey) {
-    if (personalKey.length > 512 || !/^sk-[A-Za-z0-9_-]{16,}$/.test(personalKey)) {
-      throw apiError(400, "个人 API Key 格式无效，请重新复制完整 Key。" );
+    if (!isLikelyQwenApiKey(personalKey)) {
+      throw apiError(400, "个人 API Key 无法识别，请粘贴以 sk- 开头的完整明文 Key。" );
     }
     const fingerprint = createHash("sha256").update(personalKey).digest("hex").slice(0, 16);
     return { apiKey: personalKey, source: "personal", id: `personal-${fingerprint}` };
@@ -548,6 +548,17 @@ function resolveCredential(request) {
 
 function cleanString(value) {
   return typeof value === "string" ? value.trim() : "";
+}
+
+function normalizeApiKey(value) {
+  return cleanString(value).replace(/[\u200B-\u200D\uFEFF]/g, "");
+}
+
+function isLikelyQwenApiKey(value) {
+  return value.length >= 12
+    && value.length <= 512
+    && /^sk-[\x21-\x7E]+$/.test(value)
+    && !value.includes("*");
 }
 
 function isStandaloneWord(value) {

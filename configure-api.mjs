@@ -4,7 +4,7 @@ import { join } from "node:path";
 const key = normalizeKey(await readMasked("Paste your Alibaba Cloud Model Studio API Key: "));
 if (!isLikelyApiKey(key)) {
   console.error("The key format does not look valid. Nothing was saved.");
-  console.error("Copy the complete key beginning with sk- (not the API address or a masked value containing ****).");
+  console.error("Copy the complete plaintext key beginning with sk- (including newer sk-ws or plan sk-sp keys), not a masked value containing ****.");
   process.exitCode = 1;
 } else {
   const target = join(process.cwd(), ".env.local");
@@ -80,5 +80,8 @@ function normalizeKey(value) {
 }
 
 function isLikelyApiKey(value) {
-  return value.startsWith("sk-") && value.length >= 12 && !/\s/.test(value) && !value.includes("*");
+  return value.length >= 12
+    && value.length <= 512
+    && /^sk-[\x21-\x7E]+$/.test(value)
+    && !value.includes("*");
 }
