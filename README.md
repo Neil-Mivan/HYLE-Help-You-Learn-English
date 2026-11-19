@@ -12,9 +12,9 @@
 
 ## Windows 怎么开始？
 
-[下载 Windows x64 便携版 v0.1.0](https://github.com/Neil-Mivan/HYLE-Help-You-Learn-English/releases/download/v0.1.0/HYLE-Windows-Portable-v0.1.0-x64.zip) → 右键选择「全部解压缩」→ 打开解压后的文件夹，双击 `START-HYLE.cmd`。浏览器会自动打开澄读。
+[下载 Windows x64 便携版 v0.2.0](https://github.com/Neil-Mivan/HYLE-Help-You-Learn-English/releases/download/v0.2.0/HYLE-Windows-Portable-v0.2.0-x64.zip) → 右键选择「全部解压缩」→ 打开解压后的文件夹，双击 `START-HYLE.cmd`。浏览器会自动打开澄读。
 
-这个便携包使用 Node.js 后端。仓库的 `main` 分支已更新为 **Vue 3 + Java Spring Boot**，想运行新版可以看[源码启动说明](DEVELOPMENT.md)。
+新版使用 Vue 3 和 Java Spring Boot，便携包自带 Java 运行时，不用安装 Java 或 Node.js。从旧版升级时，先关闭旧版，再将新版解压到新文件夹；用原来的浏览器打开同一地址，已有文章和笔记仍可使用。开发者请看[源码启动说明](DEVELOPMENT.md)。
 
 ## 需要账号或 API Key 吗？
 

@@ -8,7 +8,7 @@
   </parent>
   <groupId>org.hyle</groupId>
   <artifactId>hyle</artifactId>
-  <version>0.2.0-SNAPSHOT</version>
+  <version>0.2.0</version>
   <properties>
     <java.version>17</java.version>
     <npm.executable>npm</npm.executable>

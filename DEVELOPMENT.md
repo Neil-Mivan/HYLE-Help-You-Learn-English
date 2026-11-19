@@ -1,6 +1,6 @@
 # 运行 Vue 3 与 Java 本地版
 
-本地开发版使用 Vue 3、Vite 和 Spring Boot。[仓库首页](README.md) 提供已发布的 v0.1.0 Windows 便携版下载。
+本地开发版使用 Vue 3、Vite 和 Spring Boot。[仓库首页](README.md) 提供同一技术栈的 Windows x64 便携版下载。
 
 构建需要 JDK 17+、Maven 3.9，以及带 npm 的 Node.js 22.12+。在项目根目录执行：
 
@@ -17,28 +17,18 @@ Windows 上构建一次后，双击 `launch.cmd` 可自动打开网页，在最�
 
 构建后，在项目根目录执行 `node --test tests/backend-contract.mjs frontend/tests/reading.test.mjs`。接口测试使用本机模拟千问服务；界面测试用独立的 Chrome 浏览器会话验证导入、查词、高亮、复习和阅读位置。可用 `HYLE_BROWSER` 指定 Chromium 浏览器可执行文件，`JAVA_HOME` 指向 JDK 17+。
 
-## 开发者：重建 v0.1.0 系列 Windows 便携版（旧 Node.js 后端）
+## 开发者：构建 v0.2.0 Windows x64 便携版
 
 在 Windows PowerShell 中运行：
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File .\build-portable.ps1 -ReleaseVersion 0.1.0
+mvn clean package
+powershell -NoProfile -ExecutionPolicy Bypass -File .\build-portable.ps1
 ```
 
-构建脚本会：
+脚本检查 JAR 版本和 Vue 静态文件，下载并校验指定版本的 Temurin 17 Windows x64 JRE，保留运行时许可证。它只打包运行所需文件，不读取本机的 Key 或学习数据。在 `dist/` 生成 ZIP 和同名 `.sha256`，不会覆盖已有发行包。旧 Node.js 版本的源码和构建脚本仍可在 `v0.1.0` 标签中找到。
 
-1. 从 Node.js 官方网站读取校验清单
-2. 下载 Windows x64 官方运行时
-3. 验证 Node.js ZIP 的 SHA-256
-4. 按文件白名单复制网站代码
-5. 排除 `.env.local`、Git 数据、测试文件和个人数据
-6. 在 `dist` 中生成便携文件夹、ZIP 和 SHA-256 校验文件
-
-Windows on ARM 可以使用：
-
-```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File .\build-portable.ps1 -Architecture arm64 -ReleaseVersion 0.1.0
-```
+发布前，把 ZIP 完整解压到一个新的测试目录，再运行 `node tests/portable-smoke.mjs "解压后含 START-HYLE.cmd 的文件夹路径"`。测试不继承系统 Java/Node 路径，不打开真实浏览器，验证包内启动器、Vue 静态资源、未配置 Key 的状态及断开后的自动退出。
 
 ## 项目结构
 

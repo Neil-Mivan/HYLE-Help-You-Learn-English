@@ -1,4 +1,4 @@
-澄读 HYLE Windows 便携版
+澄读 HYLE v0.2.0 · Windows x64 便携版
 ========================
 
 开始使用
@@ -32,9 +32,15 @@ AI 翻译
 
 故障排除
 
-- 如果 Windows 防火墙询问是否允许访问，只需要允许“专用网络”；服务默认仅监听本机。
+- 服务默认仅监听本机，不需要对公网开放端口。
 - 如果提示端口 4173 被占用，请先关闭之前打开的澄读窗口和命令行窗口，再重试。
-- 本便携版自带 Node.js，无需另行安装。
+- 本便携版自带 Eclipse Temurin Java 17 运行时，不需要安装 Java、Node.js 或 Maven。
+- 从旧版升级：先关闭旧版网页和服务，把新版完整解压到新文件夹，用同一浏览器访问原来的 http://127.0.0.1:4173/。不要清除浏览器数据。如果以前用 configure-api.cmd 配置了 Key，请在新版重新配置，或私下将旧目录的 .env.local 复制到新版目录。
+
+运行时与许可证
+
+内置官方 Eclipse Temurin 17.0.21+9 Windows x64 JRE。许可证见 runtime/legal；
+发行文件与对应源码：https://github.com/adoptium/temurin17-binaries/releases/tag/jdk-17.0.21%2B9
 
 项目主页
 
