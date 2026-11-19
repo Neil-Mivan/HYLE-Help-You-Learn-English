@@ -9,3 +9,4 @@ snapshots/
 cloudflared.exe
 dist/
 .portable-cache/
+target/
